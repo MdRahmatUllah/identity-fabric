@@ -4,11 +4,11 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const NAV = [
+const NAV: Array<{ to: string; label: string; icon: typeof LayoutGrid; exact?: boolean }> = [
   { to: "/app", label: "Dashboard", icon: LayoutGrid, exact: true },
   { to: "/app/templates", label: "Templates", icon: IdCard },
   { to: "/app/history", label: "History", icon: History },
-] as const;
+];
 
 export function AppShell() {
   const { user, signOut } = useAuth();
