@@ -14,16 +14,198 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      generated_cards: {
+        Row: {
+          created_at: string
+          data: Json
+          generated_by: string
+          id: string
+          organization_id: string | null
+          preview_url: string | null
+          template_id: string
+          template_version: number
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          generated_by: string
+          id?: string
+          organization_id?: string | null
+          preview_url?: string | null
+          template_id: string
+          template_version?: number
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          generated_by?: string
+          id?: string
+          organization_id?: string | null
+          preview_url?: string | null
+          template_id?: string
+          template_version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_cards_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_cards_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          plan: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          plan?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          plan?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          id: string
+          organization_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          id: string
+          organization_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          organization_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      templates: {
+        Row: {
+          accent_color: string | null
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          field_manifest: Json
+          id: string
+          layout: Json
+          name: string
+          orientation: string
+          primary_color: string | null
+          status: string
+          thumbnail_url: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          accent_color?: string | null
+          category: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          field_manifest?: Json
+          id?: string
+          layout?: Json
+          name: string
+          orientation?: string
+          primary_color?: string | null
+          status?: string
+          thumbnail_url?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          accent_color?: string | null
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          field_manifest?: Json
+          id?: string
+          layout?: Json
+          name?: string
+          orientation?: string
+          primary_color?: string | null
+          status?: string
+          thumbnail_url?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      current_org_id: { Args: never; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "org_admin" | "operator" | "viewer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +332,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "org_admin", "operator", "viewer"],
+    },
   },
 } as const
