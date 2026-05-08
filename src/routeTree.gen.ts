@@ -14,6 +14,8 @@ import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppTemplatesRouteImport } from './routes/app.templates'
+import { Route as AppHistoryRouteImport } from './routes/app.history'
+import { Route as AppGenerateTemplateIdRouteImport } from './routes/app.generate.$templateId'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -40,34 +42,71 @@ const AppTemplatesRoute = AppTemplatesRouteImport.update({
   path: '/templates',
   getParentRoute: () => AppRoute,
 } as any)
+const AppHistoryRoute = AppHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppGenerateTemplateIdRoute = AppGenerateTemplateIdRouteImport.update({
+  id: '/generate/$templateId',
+  path: '/generate/$templateId',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
+  '/app/history': typeof AppHistoryRoute
   '/app/templates': typeof AppTemplatesRoute
   '/app/': typeof AppIndexRoute
+  '/app/generate/$templateId': typeof AppGenerateTemplateIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/app/history': typeof AppHistoryRoute
   '/app/templates': typeof AppTemplatesRoute
   '/app': typeof AppIndexRoute
+  '/app/generate/$templateId': typeof AppGenerateTemplateIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
+  '/app/history': typeof AppHistoryRoute
   '/app/templates': typeof AppTemplatesRoute
   '/app/': typeof AppIndexRoute
+  '/app/generate/$templateId': typeof AppGenerateTemplateIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/app' | '/auth' | '/app/templates' | '/app/'
+  fullPaths:
+    | '/'
+    | '/app'
+    | '/auth'
+    | '/app/history'
+    | '/app/templates'
+    | '/app/'
+    | '/app/generate/$templateId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/app/templates' | '/app'
-  id: '__root__' | '/' | '/app' | '/auth' | '/app/templates' | '/app/'
+  to:
+    | '/'
+    | '/auth'
+    | '/app/history'
+    | '/app/templates'
+    | '/app'
+    | '/app/generate/$templateId'
+  id:
+    | '__root__'
+    | '/'
+    | '/app'
+    | '/auth'
+    | '/app/history'
+    | '/app/templates'
+    | '/app/'
+    | '/app/generate/$templateId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -113,17 +152,35 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTemplatesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/history': {
+      id: '/app/history'
+      path: '/history'
+      fullPath: '/app/history'
+      preLoaderRoute: typeof AppHistoryRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/generate/$templateId': {
+      id: '/app/generate/$templateId'
+      path: '/generate/$templateId'
+      fullPath: '/app/generate/$templateId'
+      preLoaderRoute: typeof AppGenerateTemplateIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppHistoryRoute: typeof AppHistoryRoute
   AppTemplatesRoute: typeof AppTemplatesRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppGenerateTemplateIdRoute: typeof AppGenerateTemplateIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppHistoryRoute: AppHistoryRoute,
   AppTemplatesRoute: AppTemplatesRoute,
   AppIndexRoute: AppIndexRoute,
+  AppGenerateTemplateIdRoute: AppGenerateTemplateIdRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
@@ -136,3 +193,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
