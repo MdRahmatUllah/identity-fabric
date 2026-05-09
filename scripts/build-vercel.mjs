@@ -5,13 +5,24 @@
  *  1. Runs `vite build` with VERCEL=1 so @cloudflare/vite-plugin is skipped.
  *     TanStack Start then compiles the server as a plain Node.js ESM module.
  *  2. Copies dist/client/assets → .vercel/output/static/assets  (CDN-served)
- *  3. Bundles dist/server/server.js into a Vercel Node.js Function via esbuild.
- *     A thin adapter converts Node.js req/res ↔ Web standard Request/Response.
- *  4. Writes .vercel/output/config.json so all non-asset requests hit the SSR function.
+ *  3. Creates a CJS adapter that bridges Vercel's (req,res) API to TanStack
+ *     Start's { fetch(request) } API via dynamic import() of the ESM server.
+ *  4. Bundles only the thin CJS adapter with esbuild; copies the ESM server
+ *     bundle alongside it so the dynamic import resolves at runtime.
+ *  5. Writes .vercel/output/config.json so all non-asset requests hit the SSR
+ *     function.
  */
 
 import { execSync } from "child_process";
-import { mkdirSync, cpSync, writeFileSync, existsSync, rmSync } from "fs";
+import {
+  mkdirSync,
+  cpSync,
+  copyFileSync,
+  writeFileSync,
+  existsSync,
+  rmSync,
+  readdirSync,
+} from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 
@@ -36,58 +47,60 @@ const staticDir = resolve(vercelOut, "static/assets");
 mkdirSync(staticDir, { recursive: true });
 cpSync(resolve(root, "dist/client/assets"), staticDir, { recursive: true });
 
-// ── 4. Create Node.js adapter entry ──────────────────────────────────────────
-// TanStack Start's server exports { async fetch(request, env, ctx) }.
-// Vercel Node.js functions receive Node.js IncomingMessage/ServerResponse.
-// This adapter bridges the two.
-const adapterSrc = resolve(root, "dist/server/_vercel_adapter.mjs");
+// ── 4. Create CJS adapter ─────────────────────────────────────────────────────
+// TanStack Start's server is an ESM module that exports { fetch(req, env, ctx) }.
+// Vercel's Node.js launcher calls a CJS module.exports function with (req, res).
+// We use a CJS wrapper that loads the ESM server via dynamic import().
+const adapterSrc = resolve(root, "dist/server/_vercel_adapter.cjs");
 writeFileSync(
   adapterSrc,
-  /* js */ `
-import { Readable } from "node:stream";
-import serverModule from "./server.js";
+  `"use strict";
+const { Readable } = require("node:stream");
 
-const server = serverModule.default ?? serverModule;
+let _server;
+async function getServer() {
+  if (!_server) {
+    const m = await import("./server.js");
+    _server = m.default ?? m;
+  }
+  return _server;
+}
 
-export default async function handler(req, res) {
-  // Reconstruct the full URL from headers Vercel sets on forwarded requests.
+module.exports = async function handler(req, res) {
   const proto = req.headers["x-forwarded-proto"] ?? "https";
   const host  = req.headers["x-forwarded-host"] ?? req.headers["host"] ?? "localhost";
-  const url   = new URL(req.url ?? "/", \`\${proto}://\${host}\`);
+  const url   = new URL(req.url ?? "/", proto + "://" + host);
 
-  // Build Web-standard Headers from Node.js incoming headers.
   const headers = new Headers();
   for (const [k, v] of Object.entries(req.headers)) {
     if (v === undefined) continue;
-    if (Array.isArray(v)) v.forEach((val) => headers.append(k, val));
+    if (Array.isArray(v)) v.forEach(function(val) { headers.append(k, val); });
     else headers.set(k, v);
   }
 
-  // Requests with a body need the Node.js Readable converted to a Web ReadableStream.
   const hasBody = req.method !== "GET" && req.method !== "HEAD";
-  const webRequest = new Request(url.toString(), {
-    method: req.method ?? "GET",
-    headers,
-    ...(hasBody ? { body: Readable.toWeb(req), duplex: "half" } : {}),
-  });
+  const webRequest = new Request(url.toString(), Object.assign(
+    { method: req.method ?? "GET", headers },
+    hasBody ? { body: Readable.toWeb(req), duplex: "half" } : {}
+  ));
 
-  // Invoke TanStack Start's SSR handler.
+  const server = await getServer();
   const webResponse = await server.fetch(webRequest, {}, {});
 
   res.statusCode = webResponse.status;
-  webResponse.headers.forEach((v, k) => res.setHeader(k, v));
+  webResponse.headers.forEach(function(v, k) { res.setHeader(k, v); });
 
   if (webResponse.body) {
     Readable.fromWeb(webResponse.body).pipe(res);
   } else {
     res.end();
   }
-}
-`.trimStart(),
+};
+`,
 );
 
-// ── 5. Bundle with esbuild (Node.js target) ───────────────────────────────────
-console.log("[vercel-build] Bundling Node.js function…");
+// ── 5. Bundle CJS adapter (mark server.js external — loaded via dynamic import) ─
+console.log("[vercel-build] Bundling CJS adapter…");
 const funcDir = resolve(vercelOut, "functions/index.func");
 mkdirSync(funcDir, { recursive: true });
 
@@ -96,21 +109,38 @@ execSync(
     "node_modules/.bin/esbuild",
     adapterSrc,
     "--bundle",
-    "--format=esm",
+    "--format=cjs",
     "--platform=node",
     "--target=node20",
-    `--outfile=${funcDir}/index.mjs`,
+    "--external:./server.js",
+    `--outfile=${funcDir}/index.js`,
   ].join(" "),
   { cwd: root, stdio: "inherit" },
 );
 
-// ── 6. Vercel function metadata ───────────────────────────────────────────────
+// ── 6. Copy ESM server bundle next to the CJS wrapper ────────────────────────
+// The dynamic import("./server.js") inside index.js resolves from funcDir.
+const funcAssetsDir = resolve(funcDir, "assets");
+mkdirSync(funcAssetsDir, { recursive: true });
+
+copyFileSync(
+  resolve(root, "dist/server/server.js"),
+  resolve(funcDir, "server.js"),
+);
+for (const f of readdirSync(resolve(root, "dist/server/assets"))) {
+  copyFileSync(
+    resolve(root, "dist/server/assets", f),
+    resolve(funcAssetsDir, f),
+  );
+}
+
+// ── 7. Vercel function metadata ───────────────────────────────────────────────
 writeFileSync(
   resolve(funcDir, ".vc-config.json"),
   JSON.stringify(
     {
       runtime: "nodejs20.x",
-      handler: "index.mjs",
+      handler: "index.js",
       launcherType: "Nodejs",
       supportsResponseStreaming: true,
     },
@@ -119,22 +149,19 @@ writeFileSync(
   ),
 );
 
-// ── 7. Routing: CDN assets first, then SSR for everything else ────────────────
+// ── 8. Routing ────────────────────────────────────────────────────────────────
 writeFileSync(
   resolve(vercelOut, "config.json"),
   JSON.stringify(
     {
       version: 3,
       routes: [
-        // Hashed assets get long-lived CDN cache.
         {
           src: "/assets/(.*)",
           headers: { "Cache-Control": "public, max-age=31536000, immutable" },
           continue: true,
         },
-        // Serve matched static files (e.g. favicon once added).
         { handle: "filesystem" },
-        // All other requests → SSR Node.js function.
         { src: "/(.*)", dest: "/index" },
       ],
     },
