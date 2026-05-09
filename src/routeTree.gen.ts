@@ -15,7 +15,10 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppTemplatesRouteImport } from './routes/app.templates'
 import { Route as AppHistoryRouteImport } from './routes/app.history'
+import { Route as AppCvRouteImport } from './routes/app.cv'
 import { Route as AppGenerateTemplateIdRouteImport } from './routes/app.generate.$templateId'
+import { Route as AppEditorTemplateIdRouteImport } from './routes/app.editor.$templateId'
+import { Route as AppCvGenerateCvTemplateIdRouteImport } from './routes/app.cv-generate.$cvTemplateId'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -47,27 +50,49 @@ const AppHistoryRoute = AppHistoryRouteImport.update({
   path: '/history',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCvRoute = AppCvRouteImport.update({
+  id: '/cv',
+  path: '/cv',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppGenerateTemplateIdRoute = AppGenerateTemplateIdRouteImport.update({
   id: '/generate/$templateId',
   path: '/generate/$templateId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppEditorTemplateIdRoute = AppEditorTemplateIdRouteImport.update({
+  id: '/editor/$templateId',
+  path: '/editor/$templateId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCvGenerateCvTemplateIdRoute =
+  AppCvGenerateCvTemplateIdRouteImport.update({
+    id: '/cv-generate/$cvTemplateId',
+    path: '/cv-generate/$cvTemplateId',
+    getParentRoute: () => AppRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
+  '/app/cv': typeof AppCvRoute
   '/app/history': typeof AppHistoryRoute
   '/app/templates': typeof AppTemplatesRoute
   '/app/': typeof AppIndexRoute
+  '/app/cv-generate/$cvTemplateId': typeof AppCvGenerateCvTemplateIdRoute
+  '/app/editor/$templateId': typeof AppEditorTemplateIdRoute
   '/app/generate/$templateId': typeof AppGenerateTemplateIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/app/cv': typeof AppCvRoute
   '/app/history': typeof AppHistoryRoute
   '/app/templates': typeof AppTemplatesRoute
   '/app': typeof AppIndexRoute
+  '/app/cv-generate/$cvTemplateId': typeof AppCvGenerateCvTemplateIdRoute
+  '/app/editor/$templateId': typeof AppEditorTemplateIdRoute
   '/app/generate/$templateId': typeof AppGenerateTemplateIdRoute
 }
 export interface FileRoutesById {
@@ -75,9 +100,12 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
+  '/app/cv': typeof AppCvRoute
   '/app/history': typeof AppHistoryRoute
   '/app/templates': typeof AppTemplatesRoute
   '/app/': typeof AppIndexRoute
+  '/app/cv-generate/$cvTemplateId': typeof AppCvGenerateCvTemplateIdRoute
+  '/app/editor/$templateId': typeof AppEditorTemplateIdRoute
   '/app/generate/$templateId': typeof AppGenerateTemplateIdRoute
 }
 export interface FileRouteTypes {
@@ -86,26 +114,35 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/auth'
+    | '/app/cv'
     | '/app/history'
     | '/app/templates'
     | '/app/'
+    | '/app/cv-generate/$cvTemplateId'
+    | '/app/editor/$templateId'
     | '/app/generate/$templateId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
+    | '/app/cv'
     | '/app/history'
     | '/app/templates'
     | '/app'
+    | '/app/cv-generate/$cvTemplateId'
+    | '/app/editor/$templateId'
     | '/app/generate/$templateId'
   id:
     | '__root__'
     | '/'
     | '/app'
     | '/auth'
+    | '/app/cv'
     | '/app/history'
     | '/app/templates'
     | '/app/'
+    | '/app/cv-generate/$cvTemplateId'
+    | '/app/editor/$templateId'
     | '/app/generate/$templateId'
   fileRoutesById: FileRoutesById
 }
@@ -159,6 +196,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppHistoryRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/cv': {
+      id: '/app/cv'
+      path: '/cv'
+      fullPath: '/app/cv'
+      preLoaderRoute: typeof AppCvRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/generate/$templateId': {
       id: '/app/generate/$templateId'
       path: '/generate/$templateId'
@@ -166,20 +210,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppGenerateTemplateIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/editor/$templateId': {
+      id: '/app/editor/$templateId'
+      path: '/editor/$templateId'
+      fullPath: '/app/editor/$templateId'
+      preLoaderRoute: typeof AppEditorTemplateIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/cv-generate/$cvTemplateId': {
+      id: '/app/cv-generate/$cvTemplateId'
+      path: '/cv-generate/$cvTemplateId'
+      fullPath: '/app/cv-generate/$cvTemplateId'
+      preLoaderRoute: typeof AppCvGenerateCvTemplateIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppCvRoute: typeof AppCvRoute
   AppHistoryRoute: typeof AppHistoryRoute
   AppTemplatesRoute: typeof AppTemplatesRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppCvGenerateCvTemplateIdRoute: typeof AppCvGenerateCvTemplateIdRoute
+  AppEditorTemplateIdRoute: typeof AppEditorTemplateIdRoute
   AppGenerateTemplateIdRoute: typeof AppGenerateTemplateIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppCvRoute: AppCvRoute,
   AppHistoryRoute: AppHistoryRoute,
   AppTemplatesRoute: AppTemplatesRoute,
   AppIndexRoute: AppIndexRoute,
+  AppCvGenerateCvTemplateIdRoute: AppCvGenerateCvTemplateIdRoute,
+  AppEditorTemplateIdRoute: AppEditorTemplateIdRoute,
   AppGenerateTemplateIdRoute: AppGenerateTemplateIdRoute,
 }
 
@@ -193,3 +257,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

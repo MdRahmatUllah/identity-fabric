@@ -1,12 +1,13 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { LayoutGrid, IdCard, History, LogOut, Sparkles } from "lucide-react";
+import { LayoutGrid, IdCard, History, LogOut, Sparkles, FileText } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const NAV: Array<{ to: string; label: string; icon: typeof LayoutGrid; exact?: boolean }> = [
   { to: "/app", label: "Dashboard", icon: LayoutGrid, exact: true },
-  { to: "/app/templates", label: "Templates", icon: IdCard },
+  { to: "/app/templates", label: "ID Cards", icon: IdCard },
+  { to: "/app/cv", label: "CV / Bio", icon: FileText },
   { to: "/app/history", label: "History", icon: History },
 ];
 
